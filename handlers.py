@@ -10,6 +10,12 @@ from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 
+# Функция ресета временных данных пользователей
+async def reset_data(state: FSMContext) -> None:
+    await state.set_state()
+    await state.update_data(delete_ids=[], answers=dict())
+
+
 # Функция добавления id сообщения для его последующего удаления
 async def add_delete_ids(state: FSMContext, *messages: Message) -> None:
     for message in messages:

@@ -81,11 +81,6 @@ async def review_handler(message: Message, state: FSMContext) -> None:
     await handlers.review_answers(bot, message, state)
 
 
-async def reset_data(state: FSMContext) -> None:
-    await state.set_state()
-    await state.update_data(delete_ids=[], answers=dict())
-
-
 @router.callback_query(filters.Text('push_answers'))
 async def process_answers(callback_query: CallbackQuery, state: FSMContext) -> None:
     await callback_query.message.edit_text(bot_answers.data_loading)
@@ -132,7 +127,7 @@ async def cancel_handler(callback_query: CallbackQuery, state: FSMContext) -> No
     await callback_query.message.edit_text(bot_answers.operation_cancelled)
     await callback_query.answer('Операция отменена.')
     await state.set_state()
-    await reset_data(state)
+    await handlers.reset_data(state)
 
 
 # Функция запуска бота
