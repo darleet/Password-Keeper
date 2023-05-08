@@ -1,0 +1,7 @@
+# Ignore config file
+config.py
+
+# Ignore .idea and venv directories
+.idea
+venv
+__pycache__
