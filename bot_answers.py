@@ -1,4 +1,5 @@
 import emoji
+import config
 
 
 start_answer = 'Здравствуйте!\n\nСо мной Ваши логины и пароли от сервисов будут в целости и сохранности, ' \
@@ -20,3 +21,15 @@ operation_cancelled = f'{emoji.emojize(":wastebasket:")} Операция отм
 send = f'Отправить {emoji.emojize(":check_mark_button:")}'
 rewrite = f'{emoji.emojize(":check_mark_button:")} Перезаписать'
 cancel = f'{emoji.emojize(":cross_mark:")} Отменить'
+
+get_command = emoji.emojize(':floppy_disk:') + ' *Получение данных о сервисе*'
+no_data_warning = emoji.emojize(':warning:') + ' Не найдено записей'
+
+
+def print_service(service_name, service_login, service_pass):
+    return f'*Данные для сервиса {service_name}*\n' \
+           f'Логин: {service_login}\n' \
+           f'Пароль: {service_pass}'
+
+
+hide_warning = f'Пароль будет скрыт через {config.hide_time} секунд'

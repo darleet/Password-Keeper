@@ -1,7 +1,11 @@
+import asyncio
 import re
 import emoji
 
+import config
 import bot_answers
+
+from setter import Setter
 
 from aiogram import Bot
 from aiogram.types import Message
@@ -35,26 +39,27 @@ async def delete_temp_messages(bot: Bot, state: FSMContext, chat_id: int) -> Non
 
 
 # Универсальный обработчик ввода пользователя
-async def universal_handler(bot: Bot,
-                            user_message: Message,
+async def universal_handler(user_message: Message,
                             state, next_state: FSMContext,
-                            data_name, bot_message_text: str) -> None:
+                            data_name: str,
+                            bot_message_text: str | None = None) -> None:
     user_answer = user_message.text
     data = await state.get_data()
     answers = data['answers']
-    edit_message_id = data['edit_message_id']
     # Проверим ответ пользователя на соответствие шаблону
     if re.match(r"^[^'\"“”„`«»\n]+$", user_answer) is not None:
         answers[data_name] = user_answer
         await state.update_data(answers=answers)
-        # Отправим следующий запрос
-        await bot.edit_message_text(bot_message_text, user_message.chat.id, edit_message_id)
+        # Отправим следующий запрос, если он есть
+        if bot_message_text is not None:
+            bot_message = await user_message.answer(bot_message_text)
+            await add_delete_ids(state, bot_message)
         await state.set_state(next_state)
-        await delete_temp_messages(bot, state, user_message.chat.id)
     # Отправим сообщение об ошибке ввода при несоответствии шаблону
     else:
         bot_message = await user_message.answer(bot_answers.input_err)
         await add_delete_ids(state, bot_message)
+
     await add_delete_ids(state, user_message)
 
 
@@ -73,3 +78,8 @@ async def review_answers(bot: Bot, message: Message, state: FSMContext) -> None:
 
     bot_message = await message.answer(output, reply_markup=keyboard.as_markup())
     await add_delete_ids(state, bot_message)
+
+
+async def autodelete_message(message: Message) -> None:
+    await asyncio.sleep(config.hide_time)
+    await message.delete()

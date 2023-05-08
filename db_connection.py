@@ -57,7 +57,7 @@ async def rewrite_service(user_id: int, service_name, login, password: str) -> N
 
 
 # Функция показа всех сервисов пользователя
-async def list_services(user_id: int) -> list:
+async def list_services(user_id: int) -> list | None:
     conn = await connect_db()
     str_user_id = f'id{user_id}'
     try:
@@ -69,14 +69,13 @@ async def list_services(user_id: int) -> list:
         await add_user(user_id)
     finally:
         await conn.close()
-        return []
 
 
 # Функция получения логина и пароля от сервиса
 async def get_service(user_id: int, service_name: str) -> tuple[str, str]:
     conn = await connect_db()
     str_user_id = f'id{user_id}'
-    service = await conn.fetchrow(f'SELECT (login, password) FROM {str_user_id} '
+    service = await conn.fetchrow(f'SELECT * FROM {str_user_id} '
                                   f'WHERE service_name = $1', service_name)
     await conn.close()
     return service['login'], service['password']
