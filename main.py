@@ -40,11 +40,6 @@ dp = Dispatcher(storage=storage)
 dp.include_router(router)
 
 
-@router.message(filters.CommandStart())
-async def start_handler(message: Message) -> None:
-    await message.answer(bot_answers.start_answer)
-
-
 # Обработчик команды /set
 @router.message(filters.Command('set'))
 async def set_handler(message: Message, state: FSMContext) -> None:
@@ -56,20 +51,11 @@ async def set_handler(message: Message, state: FSMContext) -> None:
     await state.set_state(Setter.entering_service_name)
 
 
-# Обработчик команды /get
-@router.message(filters.Command('get'))
-async def set_handler(message: Message) -> None:
-    await message.answer(bot_answers.get_command)
-    user_services = await db_connection.list_services(message.from_user.id)
-
-    # Если нет ни одного записанного сервиса
-    if user_services is None:
-        await message.answer(bot_answers.no_data_warning)
-    else:
-        keyboard = InlineKeyboardBuilder()
-        for service in user_services:
-            keyboard.button(callback_data=f'service_{service}', text=service)
-        await message.answer('Выберите сервис', reply_markup=keyboard.as_markup())
+@router.message(filters.Command('cancel'))
+async def command_cancel_handler(message: Message, state: FSMContext) -> None:
+    await message.answer(bot_answers.operation_cancelled)
+    await handlers.delete_temp_messages(bot, state, message.chat.id)
+    await handlers.reset_data(state)
 
 
 # Обработчик ввода названия сервиса
@@ -115,9 +101,10 @@ async def process_answers(callback_query: CallbackQuery, state: FSMContext) -> N
         )
         await callback_query.message.edit_text(bot_answers.data_sent)
         await callback_query.answer('Данные отправлены!')
+        await handlers.reset_data(state)
     except asyncpg.UniqueViolationError:
         keyboard = InlineKeyboardBuilder()
-        keyboard.button(callback_data='cancel', text=bot_answers.cancel)
+        keyboard.button(callback_data='button_cancel', text=bot_answers.cancel)
         keyboard.button(callback_data='rewrite_answers', text=bot_answers.rewrite)
 
         await callback_query.message.edit_text(bot_answers.rewrite_warning,
@@ -139,6 +126,31 @@ async def rewrite_handler(callback_query: CallbackQuery, state: FSMContext) -> N
     )
     await callback_query.message.edit_text(bot_answers.data_sent)
     await callback_query.answer('Данные отправлены!')
+    await handlers.reset_data(state)
+
+
+# Обработчик кнопки "Отмена"
+@router.callback_query(filters.Text('button_cancel'))
+async def cancel_handler(callback_query: CallbackQuery, state: FSMContext) -> None:
+    await callback_query.message.edit_text(bot_answers.operation_cancelled)
+    await callback_query.answer('Операция отменена.')
+    await handlers.reset_data(state)
+
+
+# Обработчик команды /get
+@router.message(filters.Command('get'))
+async def set_handler(message: Message) -> None:
+    await message.answer(bot_answers.get_command)
+    user_services = await db_connection.list_services(message.from_user.id)
+
+    # Если нет ни одного записанного сервиса
+    if user_services is None:
+        await message.answer(bot_answers.no_data_warning)
+    else:
+        keyboard = InlineKeyboardBuilder()
+        for service in user_services:
+            keyboard.button(callback_data=f'service_{service}', text=service)
+        await message.answer('Выберите сервис', reply_markup=keyboard.as_markup())
 
 
 # Обработчик кнопки с названием сервиса для получения его логина и пароля
@@ -153,21 +165,9 @@ async def service_handler(callback_query: CallbackQuery):
     await handlers.autodelete_message(bot_message)
 
 
-@router.message(filters.Command('cancel'))
-async def command_cancel_handler(message: Message, state: FSMContext) -> None:
-    await message.edit_text(bot_answers.operation_cancelled)
-    await message.answer('Операция отменена.')
-    await handlers.delete_temp_messages(bot, state, message.chat.id)
-    await handlers.reset_data(state)
-
-
-# Обработчик кнопки "Отмена"
-@router.callback_query(filters.Text('cancel'))
-async def cancel_handler(callback_query: CallbackQuery, state: FSMContext) -> None:
-    await callback_query.message.edit_text(bot_answers.operation_cancelled)
-    await callback_query.answer('Операция отменена.')
-    await handlers.delete_temp_messages(bot, state, callback_query.message.chat.id)
-    await handlers.reset_data(state)
+@router.message()
+async def start_handler(message: Message) -> None:
+    await message.answer(bot_answers.start_answer)
 
 
 # Функция запуска бота

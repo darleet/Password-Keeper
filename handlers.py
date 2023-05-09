@@ -5,8 +5,6 @@ import emoji
 import config
 import bot_answers
 
-from setter import Setter
-
 from aiogram import Bot
 from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
