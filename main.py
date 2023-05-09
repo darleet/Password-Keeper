@@ -40,6 +40,11 @@ dp = Dispatcher(storage=storage)
 dp.include_router(router)
 
 
+@router.message(filters.CommandStart())
+async def start_handler(message: Message) -> None:
+    await message.answer(bot_answers.start_answer)
+
+
 # Обработчик команды /set
 @router.message(filters.Command('set'))
 async def set_handler(message: Message, state: FSMContext) -> None:
@@ -174,7 +179,7 @@ async def service_handler(callback_query: CallbackQuery):
 
 @router.message()
 async def start_handler(message: Message) -> None:
-    await message.answer(bot_answers.start_answer)
+    await message.answer(bot_answers.idle)
 
 
 # Функция запуска бота
