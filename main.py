@@ -3,10 +3,10 @@ import logging
 
 import config
 import bot_answers
-import db_connection
-import handlers
+import database_service
+from handlers import reseters, processors, universals
 
-from setter import Setter
+from structures.setter import Setter
 
 from aiogram import Bot, Dispatcher, Router
 from aiogram import filters
@@ -14,7 +14,6 @@ from aiogram import filters
 from aiogram.enums import ParseMode
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
-from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from aiogram.fsm.storage.redis import RedisStorage
 from redis import asyncio as aioredis
@@ -49,48 +48,48 @@ async def set_handler(message: Message, state: FSMContext) -> None:
     await state.update_data(delete_ids=[], answers=dict())
     # Отправим просьбу ввести название сервиса
     bot_message = await message.answer('Введите название сервиса')
-    await handlers.add_delete_ids(state, bot_message)
+    await reseters.add_delete_ids(state, bot_message)
     await state.set_state(Setter.entering_service_name)
 
 
 @router.message(filters.Command('cancel'))
 async def command_cancel_handler(message: Message, state: FSMContext) -> None:
     await message.answer(bot_answers.operation_cancelled)
-    await handlers.delete_temp_messages(bot, state, message.chat.id)
-    await handlers.reset_data(state)
+    await reseters.delete_temp_messages(bot, state, message.chat.id)
+    await reseters.reset_data(state)
 
 
 # Обработчик ввода названия сервиса
 @router.message(Setter.entering_service_name)
 async def name_handler(message: Message, state: FSMContext) -> None:
-    await handlers.universal_handler(message, state, Setter.entering_login, 'Название', 'Введите логин')
+    await universals.universal_handler(message, state, Setter.entering_login, 'Название', 'Введите логин')
 
 
 # Обработчик ввода логина
 @router.message(Setter.entering_login)
 async def login_handler(message: Message, state: FSMContext) -> None:
-    await handlers.universal_handler(message, state, Setter.entering_password, 'Логин', 'Введите пароль')
+    await universals.universal_handler(message, state, Setter.entering_password, 'Логин', 'Введите пароль')
 
 
 # Обработчик ввода пароля
 @router.message(Setter.entering_password)
 async def password_handler(message: Message, state: FSMContext) -> None:
-    await handlers.universal_handler(message, state, Setter.on_review, 'Пароль')
+    await universals.universal_handler(message, state, Setter.on_review, 'Пароль')
     if await state.get_state() == Setter.on_review:
-        await handlers.review_answers(bot, message, state)
+        await processors.review_answers(bot, message, state)
 
 
 # Этот обработчик будет вызван в случае случайной отправки сообщения при подтверждении
 @router.message(Setter.on_review)
 async def review_handler(message: Message, state: FSMContext) -> None:
     await message.answer('Для начала подтвердите или отмените отправку данных!')
-    await handlers.review_answers(bot, message, state)
+    await processors.review_answers(bot, message, state)
 
 
 # Обработчик отправки сервиса в базу данных
 @router.callback_query(filters.Text('push_answers'))
 async def process_answers(callback_query: CallbackQuery, state: FSMContext) -> None:
-    await handlers.rewrite_answers(callback_query, state)
+    await processors.rewrite_answers(callback_query, state)
 
 
 # Обработчик перезаписи сервиса в базе данных
@@ -100,7 +99,7 @@ async def rewrite_handler(callback_query: CallbackQuery, state: FSMContext) -> N
     await callback_query.answer('Данные загружаются...')
     data = await state.get_data()
     answers = data['answers']
-    await db_connection.rewrite_service(
+    await database_service.functions.rewrite_service(
         callback_query.from_user.id,
         answers['Название'],
         answers['Логин'],
@@ -108,7 +107,7 @@ async def rewrite_handler(callback_query: CallbackQuery, state: FSMContext) -> N
     )
     await callback_query.message.edit_text(bot_answers.data_sent)
     await callback_query.answer('Данные отправлены!')
-    await handlers.reset_data(state)
+    await reseters.reset_data(state)
 
 
 # Обработчик кнопки "Отмена"
@@ -116,19 +115,19 @@ async def rewrite_handler(callback_query: CallbackQuery, state: FSMContext) -> N
 async def cancel_handler(callback_query: CallbackQuery, state: FSMContext) -> None:
     await callback_query.message.edit_text(bot_answers.operation_cancelled)
     await callback_query.answer('Операция отменена.')
-    await handlers.reset_data(state)
+    await reseters.reset_data(state)
 
 
 # Обработчик команды /get
 @router.message(filters.Command('get'))
-async def get_handler(message: Message) -> None:
-    await handlers.universal_button(message, 'get')
+async def get_handler(message: Message, state: FSMContext) -> None:
+    await universals.universal_button(message, state, 'get')
 
 
 # Обработчик команды del
 @router.message(filters.Command('del'))
-async def del_handler(message: Message) -> None:
-    await handlers.universal_button(message, 'delete')
+async def del_handler(message: Message, state: FSMContext) -> None:
+    await universals.universal_button(message, state, 'delete')
 
 
 # Обработчик кнопки с названием сервиса для получения его логина и пароля
@@ -142,14 +141,14 @@ async def service_handler(callback_query: CallbackQuery):
 
     if action == 'get':
         # Получим из бд логин и пароль сервиса
-        login, password = await db_connection.get_service(callback_query.from_user.id, service_name)
+        login, password = await database_service.functions.get_service(callback_query.from_user.id, service_name)
         bot_message = await callback_query.message.answer(bot_answers.print_service(service_name, login, password))
         await callback_query.answer(bot_answers.hide_warning)
         # Добавим автоудаление сообщения по истечении времени
-        await handlers.autodelete_message(bot_message)
+        await reseters.autodelete_message(bot_message)
     else:
         # Удалим сервис из бд
-        await db_connection.del_service(callback_query.from_user.id, service_name)
+        await database_service.functions.del_service(callback_query.from_user.id, service_name)
         await callback_query.message.answer(bot_answers.service_deleted)
         await callback_query.answer('Сервис удален.')
 
