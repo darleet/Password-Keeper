@@ -1,0 +1,28 @@
+version: "3.9"
+services:
+  bot:
+    build: .
+    restart: on-failure
+    depends_on:
+      - redis
+      - postgres
+    links:
+      - redis
+      - postgres
+  redis:
+    image: 'redis:alpine'
+    restart: 'always'
+    command: redis-server
+    ports:
+      - "6379:6379"
+  postgres:
+    image: "postgres:alpine"
+    restart: always
+    hostname: postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: ${PGDATA}
+    ports:
+      - "5438:5432"

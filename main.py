@@ -1,7 +1,7 @@
 import asyncio
 import logging
+import os
 
-import config
 import bot_answers
 import database_service
 from handlers import reseters, processors, universals
@@ -10,7 +10,6 @@ from structures.setter import Setter
 
 from aiogram import Bot, Dispatcher, Router
 from aiogram import filters
-
 from aiogram.enums import ParseMode
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
@@ -18,20 +17,24 @@ from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.storage.redis import RedisStorage
 from redis import asyncio as aioredis
 
+from dotenv import load_dotenv
+
+# Загрузим .env и запустим логи
+load_dotenv()
 logging.basicConfig(level=logging.INFO)
 
 # Подключимся к Редису для хранения FSM состояний в долговременной памяти
-redis = aioredis.Redis.from_url(config.redis)
+redis = aioredis.Redis.from_url(os.getenv('REDIS'))
 storage = RedisStorage(redis)
 
 # Токен телеграм бота
-token = config.token
+TOKEN = os.getenv('BOT_TOKEN')
 
 # Создадим новый роутер
 router = Router()
 
 # Инициализируем бота и диспетчер
-bot = Bot(token=token, parse_mode=ParseMode.MARKDOWN)
+bot = Bot(token=TOKEN, parse_mode=ParseMode.MARKDOWN)
 dp = Dispatcher(storage=storage)
 dp.include_router(router)
 

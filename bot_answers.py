@@ -1,5 +1,6 @@
+import os
+
 import emoji
-import config
 
 start_answer = 'Здравствуйте!\n\nСо мной Ваши логины и пароли от сервисов будут в целости и сохранности, ' \
                'дело за малым - напишите их мне, а я их спрячу в надежное место!\n\n' \
@@ -36,6 +37,6 @@ def print_service(service_name, service_login, service_pass):
            f'Пароль: {service_pass}'
 
 
-hide_warning = f'Пароль будет скрыт через {config.hide_time} секунд'
+hide_warning = f'Пароль будет скрыт через {os.getenv("HIDE_TIME")} секунд'
 
 service_deleted = f'{emoji.emojize(":wastebasket:")} Сервис удален.'

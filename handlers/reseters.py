@@ -1,6 +1,5 @@
 import asyncio
-
-import config
+import os
 
 from aiogram import Bot
 from aiogram.types import Message
@@ -32,5 +31,5 @@ async def delete_temp_messages(bot: Bot, state: FSMContext, chat_id: int) -> Non
 
 
 async def autodelete_message(message: Message) -> None:
-    await asyncio.sleep(config.hide_time)
+    await asyncio.sleep(int(os.getenv('HIDE_TIME')))
     await message.delete()

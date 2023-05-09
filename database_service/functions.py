@@ -1,5 +1,6 @@
 import asyncio
-import config
+import os
+
 import asyncpg
 
 
@@ -8,7 +9,7 @@ async def connect_db() -> asyncpg.Connection:
     retries = 0
     while retries < 5:
         try:
-            conn = await asyncpg.connect(config.db)
+            conn = await asyncpg.connect(os.getenv('DATABASE'))
             return conn
         except asyncpg.ConnectionFailureError:
             await asyncio.sleep(5)
