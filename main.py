@@ -25,7 +25,7 @@ from redis import asyncio as aioredis
 logging.basicConfig(level=logging.INFO)
 
 # Подключимся к Редису для хранения FSM состояний в долговременной памяти
-redis = aioredis.Redis.from_url(f'redis://localhost:6379/users_data')
+redis = aioredis.Redis.from_url(config.redis)
 storage = RedisStorage(redis)
 
 # Токен телеграм бота
@@ -153,12 +153,19 @@ async def service_handler(callback_query: CallbackQuery):
     await handlers.autodelete_message(bot_message)
 
 
+@router.message(filters.Command('cancel'))
+async def command_cancel_handler(message: Message, state: FSMContext) -> None:
+    await message.edit_text(bot_answers.operation_cancelled)
+    await message.answer('Операция отменена.')
+    await handlers.delete_temp_messages(bot, state, message.chat.id)
+    await handlers.reset_data(state)
+
+
 # Обработчик кнопки "Отмена"
 @router.callback_query(filters.Text('cancel'))
 async def cancel_handler(callback_query: CallbackQuery, state: FSMContext) -> None:
     await callback_query.message.edit_text(bot_answers.operation_cancelled)
     await callback_query.answer('Операция отменена.')
-    await state.set_state()
     await handlers.delete_temp_messages(bot, state, callback_query.message.chat.id)
     await handlers.reset_data(state)
 
