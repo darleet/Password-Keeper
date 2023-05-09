@@ -1,11 +1,8 @@
 import asyncio
 import logging
 
-import asyncpg
-
 import config
 import bot_answers
-
 import db_connection
 import handlers
 
@@ -93,27 +90,7 @@ async def review_handler(message: Message, state: FSMContext) -> None:
 # Обработчик отправки сервиса в базу данных
 @router.callback_query(filters.Text('push_answers'))
 async def process_answers(callback_query: CallbackQuery, state: FSMContext) -> None:
-    await callback_query.message.edit_text(bot_answers.data_loading)
-    await callback_query.answer('Данные загружаются...')
-    data = await state.get_data()
-    answers = data['answers']
-    try:
-        await db_connection.add_service(
-            callback_query.from_user.id,
-            answers['Название'],
-            answers['Логин'],
-            answers['Пароль']
-        )
-        await callback_query.message.edit_text(bot_answers.data_sent)
-        await callback_query.answer('Данные отправлены!')
-        await handlers.reset_data(state)
-    except asyncpg.UniqueViolationError:
-        keyboard = InlineKeyboardBuilder()
-        keyboard.button(callback_data='button_cancel', text=bot_answers.cancel)
-        keyboard.button(callback_data='rewrite_answers', text=bot_answers.rewrite)
-
-        await callback_query.message.edit_text(bot_answers.rewrite_warning,
-                                               reply_markup=keyboard.as_markup())
+    await handlers.rewrite_answers(callback_query, state)
 
 
 # Обработчик перезаписи сервиса в базе данных

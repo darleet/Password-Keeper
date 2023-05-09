@@ -1,13 +1,14 @@
 import asyncio
 import re
 import emoji
+import asyncpg
 
 import config
 import bot_answers
 import db_connection
 
 from aiogram import Bot
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -71,12 +72,37 @@ async def review_answers(bot: Bot, message: Message, state: FSMContext) -> None:
 
     keyboard = InlineKeyboardBuilder()
     keyboard.button(callback_data='push_answers', text=bot_answers.send)
+    keyboard.button(callback_data='button_cancel', text=bot_answers.cancel)
 
     for key, value in answers.items():
         output += emoji.emojize(':small_blue_diamond:') + f'{key}: {value}\n'
 
     bot_message = await message.answer(output, reply_markup=keyboard.as_markup())
     await add_delete_ids(state, bot_message)
+
+
+async def rewrite_answers(callback_query: CallbackQuery, state: FSMContext):
+    await callback_query.message.edit_text(bot_answers.data_loading)
+    await callback_query.answer('Данные загружаются...')
+    data = await state.get_data()
+    answers = data['answers']
+    try:
+        await db_connection.add_service(
+            callback_query.from_user.id,
+            answers['Название'],
+            answers['Логин'],
+            answers['Пароль']
+        )
+        await callback_query.message.edit_text(bot_answers.data_sent)
+        await callback_query.answer('Данные отправлены!')
+        await reset_data(state)
+    except asyncpg.UniqueViolationError:
+        keyboard = InlineKeyboardBuilder()
+        keyboard.button(callback_data='button_cancel', text=bot_answers.cancel)
+        keyboard.button(callback_data='rewrite_answers', text=bot_answers.rewrite)
+
+        await callback_query.message.edit_text(bot_answers.rewrite_warning,
+                                               reply_markup=keyboard.as_markup())
 
 
 async def autodelete_message(message: Message) -> None:
