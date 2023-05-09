@@ -40,7 +40,7 @@ async def universal_button(message: Message, state: FSMContext, action: str) -> 
     user_services = await database_service.functions.list_services(message.from_user.id)
 
     # Если нет ни одного записанного сервиса
-    if user_services is None:
+    if user_services is None or not user_services:
         await message.answer(bot_answers.no_data_warning)
     else:
         keyboard = InlineKeyboardBuilder()

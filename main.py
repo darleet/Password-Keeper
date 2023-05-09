@@ -40,8 +40,9 @@ dp.include_router(router)
 
 
 @router.message(filters.CommandStart())
-async def start_handler(message: Message) -> None:
+async def start_handler(message: Message, state: FSMContext) -> None:
     await message.answer(bot_answers.start_answer)
+    await state.update_data(delete_ids=[], answers=dict())
 
 
 # Обработчик команды /set
@@ -157,7 +158,7 @@ async def service_handler(callback_query: CallbackQuery):
 
 
 @router.message()
-async def start_handler(message: Message) -> None:
+async def other_handler(message: Message) -> None:
     await message.answer(bot_answers.idle)
 
 
