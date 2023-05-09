@@ -4,6 +4,7 @@ import emoji
 
 import config
 import bot_answers
+import db_connection
 
 from aiogram import Bot
 from aiogram.types import Message
@@ -81,3 +82,17 @@ async def review_answers(bot: Bot, message: Message, state: FSMContext) -> None:
 async def autodelete_message(message: Message) -> None:
     await asyncio.sleep(config.hide_time)
     await message.delete()
+
+
+async def universal_button(message: Message, action: str) -> None:
+    await message.answer(bot_answers.get_command)
+    user_services = await db_connection.list_services(message.from_user.id)
+
+    # Если нет ни одного записанного сервиса
+    if user_services is None:
+        await message.answer(bot_answers.no_data_warning)
+    else:
+        keyboard = InlineKeyboardBuilder()
+        for service in user_services:
+            keyboard.button(callback_data=f'service_{action}_{service}', text=service)
+        await message.answer('Выберите сервис', reply_markup=keyboard.as_markup())

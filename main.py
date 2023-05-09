@@ -139,30 +139,37 @@ async def cancel_handler(callback_query: CallbackQuery, state: FSMContext) -> No
 
 # Обработчик команды /get
 @router.message(filters.Command('get'))
-async def set_handler(message: Message) -> None:
-    await message.answer(bot_answers.get_command)
-    user_services = await db_connection.list_services(message.from_user.id)
+async def get_handler(message: Message) -> None:
+    await handlers.universal_button(message, 'get')
 
-    # Если нет ни одного записанного сервиса
-    if user_services is None:
-        await message.answer(bot_answers.no_data_warning)
-    else:
-        keyboard = InlineKeyboardBuilder()
-        for service in user_services:
-            keyboard.button(callback_data=f'service_{service}', text=service)
-        await message.answer('Выберите сервис', reply_markup=keyboard.as_markup())
+
+# Обработчик команды del
+@router.message(filters.Command('del'))
+async def del_handler(message: Message) -> None:
+    await handlers.universal_button(message, 'delete')
 
 
 # Обработчик кнопки с названием сервиса для получения его логина и пароля
-@router.callback_query(filters.Text(startswith='service_'))
+@router.callback_query(filters.Text(startswith='service'))
 async def service_handler(callback_query: CallbackQuery):
+    # Удалим сообщение с выбором
     await callback_query.message.delete()
-    service_name = callback_query.data.split('_')[1]
-    login, password = await db_connection.get_service(callback_query.from_user.id, service_name)
-    bot_message = await callback_query.message.answer(bot_answers.print_service(service_name, login, password))
-    await callback_query.answer(bot_answers.hide_warning)
-    # Добавим автоудаление сообщения по истечении времени
-    await handlers.autodelete_message(bot_message)
+    # Получим из callback_query название действия и имя сервиса
+    data = callback_query.data.split('_')
+    action, service_name = data[1], data[2]
+
+    if action == 'get':
+        # Получим из бд логин и пароль сервиса
+        login, password = await db_connection.get_service(callback_query.from_user.id, service_name)
+        bot_message = await callback_query.message.answer(bot_answers.print_service(service_name, login, password))
+        await callback_query.answer(bot_answers.hide_warning)
+        # Добавим автоудаление сообщения по истечении времени
+        await handlers.autodelete_message(bot_message)
+    else:
+        # Удалим сервис из бд
+        await db_connection.del_service(callback_query.from_user.id, service_name)
+        await callback_query.message.answer(bot_answers.service_deleted)
+        await callback_query.answer('Сервис удален.')
 
 
 @router.message()

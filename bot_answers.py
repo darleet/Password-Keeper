@@ -33,3 +33,5 @@ def print_service(service_name, service_login, service_pass):
 
 
 hide_warning = f'Пароль будет скрыт через {config.hide_time} секунд'
+
+service_deleted = f'{emoji.emojize(":wastebasket:")} Сервис удален.'
