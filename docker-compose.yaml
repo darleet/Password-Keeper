@@ -4,26 +4,23 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    restart: on-failure
+    restart: unless-stopped
     depends_on:
-      - redis
-      - postgres
-    links:
       - redis
       - postgres
   redis:
     image: 'redis:alpine'
-    restart: 'always'
-    ports:
-      - "6379:6379"
+    restart: unless-stopped
+    expose:
+      - "6379"
   postgres:
     image: "postgres:alpine"
-    restart: always
+    restart: unless-stopped
     hostname: postgres
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       PGDATA: ${PGDATA}
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
